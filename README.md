@@ -1,6 +1,6 @@
 # README #
 
-This README contains the source code for the QualComm-developed FTC SDK.  The project files have been configured so that you can import them as a non-Android Studio project (accept the default Gradle wrapper settings when you do the import). 
+This repo contains the source code for the QualComm-developed FTC SDK.  The project files have been configured so that you can import them as a non-Android Studio project (accept the default Gradle wrapper settings when you do the import). 
 
 Android device min reqmts:
 
