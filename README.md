@@ -8,4 +8,4 @@ Android device min reqmts:
 * USB OTG support (for gamepad support and to connect to Modern Robotics modules)
 * Root access for driver station is required if you want to force WiFi channel selection.
 
-contact FTCTechnh@gmail.com for details.
+Contact FTCTechnh@gmail.com for details.
