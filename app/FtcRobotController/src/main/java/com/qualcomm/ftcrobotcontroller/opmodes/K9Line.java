@@ -122,12 +122,6 @@ public class K9Line extends OpMode {
 		arm.setPosition(armPosition);
 		claw.setPosition(clawPosition);
 
-        /*
-         * As a temporary fix, turn on LED in run() event rather than in start().
-         */
-        // turn on LED of light sensor.
-        reflectedLight.enableLed(true);
-
 		/*
 		 * read the light sensor.
 		 */

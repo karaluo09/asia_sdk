@@ -1,4 +1,4 @@
-/* Copyright (c) 2014 Qualcomm Technologies Inc
+/* Copyright (c) 2015 Qualcomm Technologies Inc
 
 All rights reserved.
 
@@ -33,32 +33,72 @@ package com.qualcomm.ftcrobotcontroller.opmodes;
 
 import com.qualcomm.ftccommon.DbgLog;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.IrSeekerSensor;
-import com.qualcomm.robotcore.hardware.LightSensor;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.util.ElapsedTime;
 
 /**
- * TEST OP Mode
+ * ThreadOp
  * <p>
- * USED FOR TESTING ONLY
+ * This OP mode shows an example of an op mode using threads.
  */
-public class TestOp extends OpMode {
+public class ThreadOp extends OpMode {
 
-  ElapsedTime timer = new ElapsedTime();
+  /*
+   * This class continually calculates the position of a servo
+   */
+  public static class WaveRunnable implements Runnable {
 
-  DcMotor left;
-  DcMotor right;
+    private static final double MIN_POSITION = 0.0;
+    private static final double MAX_POSITION = 1.0;
 
-  DcMotor flag;
-  DcMotor arm;
+    private static final double POSITION_DELTA = 0.005;
 
+    // These variables are volatile to let Java know multiple threads will access it
+    private volatile double position = 0.0;
+    private volatile boolean running = true;
+
+    private double direction = 1.0;
+
+    @Override
+    public void run() {
+
+      DbgLog.msg("Starting up wave thread");
+
+      try {
+        running = true;
+        while (running) {
+          position += (POSITION_DELTA * direction);
+
+          if (position > MAX_POSITION) {
+            position = MAX_POSITION;
+            direction *= -1;
+          } else if (position < MIN_POSITION) {
+            position = MIN_POSITION;
+            direction *= -1;
+          }
+
+          Thread.sleep(10);
+        }
+      } catch (InterruptedException e) {
+        // allow thread to shut down when we receive an interrupted exception
+      }
+
+      running = false;
+
+      DbgLog.msg("Stopping up wave thread");
+    }
+
+    public double getPosition() {
+      return position;
+    }
+
+    public void shutdown() {
+      running = false;
+    }
+  }
+
+  WaveRunnable waveRunnable;
+  Thread waveThread;
   Servo servoA;
-  Servo servoB;
-
-  IrSeekerSensor irSeekerSensor;
-  LightSensor lightSensor;
 
   /*
    * Code to run when the op mode is first enabled goes here
@@ -66,23 +106,10 @@ public class TestOp extends OpMode {
    */
   @Override
   public void start() {
-
-    DbgLog.msg("****** TEST OP: start");
-
-    left = hardwareMap.dcMotor.get("left");
-    right = hardwareMap.dcMotor.get("right");
-    right.setDirection(DcMotor.Direction.REVERSE);
-
-    flag = hardwareMap.dcMotor.get("flag");
-    arm = hardwareMap.dcMotor.get("arm");
+    waveRunnable = new WaveRunnable();
+    waveThread = new Thread(waveRunnable);
 
     servoA = hardwareMap.servo.get("a");
-    servoB = hardwareMap.servo.get("b");
-
-    irSeekerSensor = hardwareMap.irSeekerSensor.get("ir_seeker");
-    lightSensor = hardwareMap.lightSensor.get("light");
-
-    lightSensor.enableLed(true);
   }
 
   /*
@@ -91,35 +118,9 @@ public class TestOp extends OpMode {
    */
   @Override
   public void run() {
-    servoA.setPosition(gamepad1.left_trigger);
-    servoB.setPosition(gamepad1.right_trigger);
-
-    left.setPower(gamepad1.left_stick_y);
-    right.setPower(gamepad1.right_stick_y);
-
-    if (gamepad1.x) {
-      flag.setPower(0.25);
-    } else {
-      flag.setPower(0.0);
-    }
-
-    if (gamepad1.y) {
-      arm.setPower(0.30);
-    } else if (gamepad1.a) {
-      arm.setPower(-0.30);
-    } else {
-      arm.setPower(0.0);
-    }
+    servoA.setPosition(waveRunnable.getPosition());
 
     telemetry.addData("servo a", servoA.getPosition());
-    telemetry.addData("servo b", servoB.getPosition());
-    telemetry.addData("runtime", time);
-    telemetry.addData("ir seeker strength", irSeekerSensor.getStrength());
-    telemetry.addData("ir seeker angle", irSeekerSensor.getAngle());
-    telemetry.addData("light", lightSensor.getLightLevel());
-    telemetry.addData("timer", timer.time());
-
-    timer.reset();
   }
 
   /*
@@ -128,7 +129,6 @@ public class TestOp extends OpMode {
    */
   @Override
   public void stop() {
-    DbgLog.msg("****** TEST OP: stop");
+    if (waveRunnable != null) waveRunnable.shutdown();
   }
-
 }

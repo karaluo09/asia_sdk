@@ -34,10 +34,12 @@ package com.qualcomm.robotcore.eventloop.opmode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.LightSensor;
 import com.qualcomm.robotcore.hardware.ServoController;
 import com.qualcomm.robotcore.util.RobotLog;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -52,12 +54,15 @@ public class OpModeManager {
   public static final String DEFAULT_OP_MODE_NAME = "Stop Robot";
   public static final OpMode DEFAULT_OP_MODE = new DefaultOpMode();
 
-  private Map<String, Class<?>> opModes = new HashMap<String, Class<?>>();
+  private Map<String, Class<?>> opModeClasses = new HashMap<String, Class<?>>();
+  private Map<String, OpMode> opModeObjects = new HashMap<String, OpMode>();
 
   private String activeOpModeName = DEFAULT_OP_MODE_NAME;
   private OpMode activeOpMode = DEFAULT_OP_MODE;
 
   private HardwareMap hardwareMap = new HardwareMap();
+
+  private boolean opModeSwapNeeded = false;
 
   public OpModeManager(HardwareMap hardwareMap, OpModeRegister register) {
     this.hardwareMap = hardwareMap;
@@ -80,27 +85,11 @@ public class OpModeManager {
     return hardwareMap;
   }
 
-  public void switchOpModes(String name) {
-    RobotLog.i("Attempting to switch to op mode " + name);
-
-    stopActiveOpMode();
-
-    try {
-      activeOpModeName = name;
-      activeOpMode = (OpMode) opModes.get(name).newInstance();
-    } catch (InstantiationException e) {
-      RobotLog.e("Unable to start op mode " + name + ", InstantiationException");
-      RobotLog.logStacktrace(e);
-    } catch (IllegalAccessException e) {
-      RobotLog.e("Unable to start op mode " + name + ", IllegalAccessException");
-      RobotLog.logStacktrace(e);
-    }
-
-    startActiveOpMode();
-  }
-
   public Set<String> getOpModes() {
-    return opModes.keySet();
+    Set<String> opModelist = new HashSet<String>();
+    opModelist.addAll(opModeClasses.keySet());
+    opModelist.addAll(opModeObjects.keySet());
+    return opModelist;
   }
 
   public String getActiveOpModeName() { return  activeOpModeName; }
@@ -109,36 +98,85 @@ public class OpModeManager {
     return activeOpMode;
   }
 
+  public void switchOpModes(String name) {
+    activeOpModeName = name;
+    opModeSwapNeeded = true;
+  }
+
   public void startActiveOpMode() {
-    activeOpMode.time = activeOpMode.getRuntime();
     activeOpMode.hardwareMap = hardwareMap;
     activeOpMode.start();
+  }
+
+  public void stopActiveOpMode() {
+    activeOpMode.stop();
   }
 
   public void runActiveOpMode(Gamepad[] gamepads) {
     activeOpMode.time = activeOpMode.getRuntime();
     activeOpMode.gamepad1 = gamepads[0];
     activeOpMode.gamepad2 = gamepads[1];
+
+    // run the start method, if needed
+    if (opModeSwapNeeded) { performOpModeSwap(); }
+
     activeOpMode.run();
   }
 
-  public void stopActiveOpMode() {
-    activeOpMode.stop();
-
-    // set sane defaults
-    activeOpModeName = DEFAULT_OP_MODE_NAME;
-    activeOpMode = DEFAULT_OP_MODE;
-  }
-
   public void logOpModes() {
-    RobotLog.i("There are " + opModes.size() + " Op Modes");
-    for (Map.Entry<String, Class<?>> entry : opModes.entrySet()) {
+    int opModeCount = opModeClasses.size() + opModeObjects.size();
+    RobotLog.i("There are " + opModeCount + " Op Modes");
+    for (Map.Entry<String, Class<?>> entry : opModeClasses.entrySet()) {
+      RobotLog.i("   Op Mode: " + entry.getKey());
+    }
+    for (Map.Entry<String, OpMode> entry : opModeObjects.entrySet()) {
       RobotLog.i("   Op Mode: " + entry.getKey());
     }
   }
 
-  public void register(String name, Class opModeClass) {
-    opModes.put(name, opModeClass);
+  public void register(String name, Class opMode) {
+    if (isOpModeRegistered(name)) { throw new IllegalArgumentException("Cannot register the same op mode name twice"); }
+
+    opModeClasses.put(name, opMode);
+  }
+
+  public void register(String name, OpMode opMode) {
+    if (isOpModeRegistered(name)) { throw new IllegalArgumentException("Cannot register the same op mode name twice"); }
+
+    opModeObjects.put(name, opMode);
+  }
+
+  private void performOpModeSwap() {
+    RobotLog.i("Attempting to switch to op mode " + activeOpModeName);
+
+    stopActiveOpMode();
+
+    try {
+      if (opModeObjects.containsKey(activeOpModeName)) {
+        activeOpMode = opModeObjects.get(activeOpModeName);
+      } else {
+        activeOpMode = (OpMode) opModeClasses.get(activeOpModeName).newInstance();
+      }
+    } catch (InstantiationException e) {
+      failedToSwapOpMode(e);
+    } catch (IllegalAccessException e) {
+      failedToSwapOpMode(e);
+    }
+
+    startActiveOpMode();
+
+    opModeSwapNeeded = false;
+  }
+
+  private boolean isOpModeRegistered(String name) {
+    return getOpModes().contains(name);
+  }
+
+  private void failedToSwapOpMode(Exception e) {
+    RobotLog.e("Unable to start op mode " + activeOpModeName);
+    RobotLog.logStacktrace(e);
+    activeOpModeName = DEFAULT_OP_MODE_NAME;
+    activeOpMode = DEFAULT_OP_MODE;
   }
 
   /*
@@ -165,6 +203,11 @@ public class OpModeManager {
       // power down the motors
       for (Map.Entry<String, DcMotor> dcMotor : hardwareMap.dcMotor.entrySet()) {
         dcMotor.getValue().setPowerFloat();
+      }
+
+      // turn of light sensors
+      for (Map.Entry<String, LightSensor> light : hardwareMap.lightSensor.entrySet()) {
+        light.getValue().enableLed(false);
       }
     }
 

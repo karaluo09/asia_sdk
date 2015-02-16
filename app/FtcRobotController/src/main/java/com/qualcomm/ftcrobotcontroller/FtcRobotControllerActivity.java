@@ -100,7 +100,13 @@ public class FtcRobotControllerActivity extends Activity
         @Override
         public void run() {
           try { Thread.sleep(1500); } catch (InterruptedException ignored) { }
-          requestRobotRestart();
+          runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+              requestRobotRestart();
+            }
+          });
+
         }
       };
       t.start();

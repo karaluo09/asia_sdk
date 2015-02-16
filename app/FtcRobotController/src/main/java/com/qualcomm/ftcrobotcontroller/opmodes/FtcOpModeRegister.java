@@ -56,12 +56,10 @@ public class FtcOpModeRegister implements OpModeRegister {
      * final op mode will remain.
      */
 
-//    manager.register("AutoRotateOp", AutoRotateOp.class);
-//    manager.register("IrSeekerOp", IrSeekerOp.class);
     manager.register("NullOp", NullOp.class);
     manager.register("K9TeleOp", K9TeleOp.class);
     manager.register("K9TankDrive", K9TankDrive.class);
-    manager.register("K9IrSeeker", K9IrSeeker.class);
     manager.register("K9Line", K9Line.class);
+    manager.register("K9IrSeeker", K9IrSeeker.class);
   }
 }
