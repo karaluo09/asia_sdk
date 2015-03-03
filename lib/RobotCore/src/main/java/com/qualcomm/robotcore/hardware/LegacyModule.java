@@ -51,7 +51,7 @@ public interface LegacyModule {
    * @param memAddress memory address on the device
    * @param initialValues initial values to write
    */
-  public void enableNxI2ctWriteMode(int physicalPort, int i2cAddress, int memAddress, byte[] initialValues);
+  public void enableNxtI2ctWriteMode(int physicalPort, int i2cAddress, int memAddress, byte[] initialValues);
 
   /**
    * Enable a physical port in analog read mode
@@ -96,6 +96,13 @@ public interface LegacyModule {
    * @return byte[] containing the two analog values; low byte first, high byte second
    */
   public byte[] readAnalog(int physicalPort);
+
+  /**
+   * Determine if a physical port is ready
+   * @param physicalPort physical port number on the device
+   * @return true if ready for command; false otherwise
+   */
+  public boolean isPortReady(int physicalPort);
 
   /**
    * Close the device

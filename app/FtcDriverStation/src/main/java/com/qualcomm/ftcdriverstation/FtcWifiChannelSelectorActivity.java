@@ -31,6 +31,7 @@
 package com.qualcomm.ftcdriverstation;
 
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.net.wifi.WifiManager;
@@ -52,9 +53,14 @@ import java.io.IOException;
 public class FtcWifiChannelSelectorActivity extends Activity
     implements OnItemSelectedListener, OnClickListener {
 
+  private static final int INVALID = WifiDirectChannelSelection.INVALID;
+  private static int spinnerSelection = 0;
+
   private Button buttonConfigure;
   private Button buttonWifiSettings;
   private Spinner spinner;
+  private ProgressDialog progressDialog;
+
 
   private WifiDirectChannelSelection wifiConfig;
 
@@ -70,18 +76,17 @@ public class FtcWifiChannelSelectorActivity extends Activity
 
     context = this;
 
-    spinner = (Spinner) findViewById(R.id.spinner1);
-
+    spinner = (Spinner) findViewById(R.id.spinnerChannelSelect);
     ArrayAdapter<CharSequence> adapter =
         ArrayAdapter.createFromResource(this, R.array.wifi_direct_channels,
             android.R.layout.simple_spinner_item);
-
     adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
     spinner.setAdapter(adapter);
     spinner.setOnItemSelectedListener(this);
 
     buttonConfigure = (Button) findViewById(R.id.buttonConfigure);
     buttonConfigure.setOnClickListener(this);
+
     buttonWifiSettings = (Button) findViewById(R.id.buttonWifiSettings);
     buttonWifiSettings.setOnClickListener(this);
 
@@ -90,9 +95,16 @@ public class FtcWifiChannelSelectorActivity extends Activity
   }
 
   @Override
+  protected void onStart() {
+    super.onStart();
+    spinner.setSelection(spinnerSelection);
+  }
+
+  @Override
   public void onItemSelected(AdapterView<?> av, View v, int item, long l) {
     switch(item) {
-      case  0: wifi_direct_class =  -1; wifi_direct_channel =  -1; break;
+      case  0: wifi_direct_class = INVALID; wifi_direct_channel = INVALID; break;
+
       case  1: wifi_direct_class =  81; wifi_direct_channel =   1; break;
       case  2: wifi_direct_class =  81; wifi_direct_channel =   6; break;
       case  3: wifi_direct_class =  81; wifi_direct_channel =  11; break;
@@ -118,6 +130,7 @@ public class FtcWifiChannelSelectorActivity extends Activity
   public void onClick(View v) {
     switch (v.getId()) {
       case R.id.buttonConfigure:
+        spinnerSelection = spinner.getSelectedItemPosition();
         configure();
         break;
       case R.id.buttonWifiSettings:
@@ -129,24 +142,28 @@ public class FtcWifiChannelSelectorActivity extends Activity
   }
 
   private void configure() {
-    if (wifi_direct_class == -1 || wifi_direct_channel == -1) {
-      toast("Please select a channel", Toast.LENGTH_SHORT);
-      return;
-    }
-
     DbgLog.msg(String.format("configure p2p channel - class %d channel %d",
         wifi_direct_class, wifi_direct_channel));
 
     try {
+      progressDialog = ProgressDialog.show(this, "Configuring Channel", "Please Wait", true);
+
       wifiConfig.config(wifi_direct_class, wifi_direct_channel);
       new Thread(new Runnable() {
         @Override
         public void run() {
           try {
-            toast("Please Wait", Toast.LENGTH_SHORT);
             Thread.sleep(5 * 1000); // in milliseconds
           } catch (InterruptedException e) { } // ignore
-          toast("Complete", Toast.LENGTH_SHORT);
+
+          runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+              setResult(RESULT_OK);
+              progressDialog.dismiss();
+              finish();
+            }
+          });
         }
       }).start();
     } catch (IOException e) {
@@ -155,11 +172,11 @@ public class FtcWifiChannelSelectorActivity extends Activity
     }
   }
 
-  private void toast(final String msg, int toastLength) {
+  private void toast(final String msg, final int toastLength) {
     Runnable toast = new Runnable() {
       @Override
       public void run() {
-        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
+        Toast.makeText(context, msg, toastLength).show();
       }
     };
 

@@ -46,6 +46,7 @@ import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.factory.RobotFactory;
 import com.qualcomm.robotcore.robot.Robot;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.RobotLog;
 import com.qualcomm.robotcore.wifi.WifiDirectAssistant;
 import com.qualcomm.robotcore.wifi.WifiDirectAssistant.WifiDirectAssistantCallback;
 
@@ -70,7 +71,7 @@ public class FtcRobotControllerService extends Service implements WifiDirectAssi
   private WifiDirectAssistant.Event wifiDirectStatus = WifiDirectAssistant.Event.DISCONNECTED;
   private String robotStatus = "Robot Status: null";
 
-  private Callback callback = null;
+  private FtcRobotControllerActivity.Callback callback = null;
   private final EventLoopMonitor eventLoopMonitor = new EventLoopMonitor();
 
   private final ElapsedTime networkTimer = new ElapsedTime();
@@ -79,12 +80,6 @@ public class FtcRobotControllerService extends Service implements WifiDirectAssi
   private final Condition networkChange = networkLock.newCondition();
 
   private Thread robotSetupThread = null;
-
-  public interface Callback {
-    public void wifiDirectUpdate(final WifiDirectAssistant.Event event);
-
-    public void robotUpdate(final String status);
-  }
 
   public class FtcRobotControllerBinder extends Binder {
     FtcRobotControllerService getService() {
@@ -190,6 +185,10 @@ public class FtcRobotControllerService extends Service implements WifiDirectAssi
     return driverStationMac;
   }
 
+  public WifiDirectAssistant getWifiDirectAssistant() {
+    return wifiDirect;
+  }
+
   public WifiDirectAssistant.Event getWifiDirectStatus() {
     return wifiDirectStatus;
   }
@@ -227,7 +226,7 @@ public class FtcRobotControllerService extends Service implements WifiDirectAssi
     return false; // don't have new clients call onRebind()
   }
 
-  public synchronized void setCallback(Callback callback) {
+  public synchronized void setCallback(FtcRobotControllerActivity.Callback callback) {
     this.callback = callback;
   }
 
@@ -248,6 +247,7 @@ public class FtcRobotControllerService extends Service implements WifiDirectAssi
       DbgLog.msg("Old setup stopped; restarting setup");
     }
 
+    RobotLog.clearGlobalErrorMsg();
     DbgLog.msg("Processing robot setup");
 
     SharedPreferences sharedPref = PreferenceManager.getDefaultSharedPreferences(this);
@@ -330,6 +330,8 @@ public class FtcRobotControllerService extends Service implements WifiDirectAssi
 
   private void updateRobotStatus(final String status) {
     robotStatus = status;
-    if (callback != null) callback.robotUpdate(status);
+    if (callback != null) {
+      callback.robotUpdate(status);
+    }
   }
 }

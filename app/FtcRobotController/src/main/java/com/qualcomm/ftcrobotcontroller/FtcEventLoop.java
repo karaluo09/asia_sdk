@@ -119,9 +119,9 @@ public class FtcEventLoop implements EventLoop {
 
     // Get access to gamepad 1 and 2
     Gamepad gamepads[] = eventLoopManager.getGamepads();
-    opModeManager.runActiveOpMode(gamepads);
+    callback.updateUi(opModeManager.getActiveOpModeName(), gamepads);
 
-    callback.updateGamepadUi(gamepads);
+    opModeManager.runActiveOpMode(gamepads);
 
     // send telemetry data
     if (telemetryTimer.time() > telemetryInterval) {
@@ -216,7 +216,11 @@ public class FtcEventLoop implements EventLoop {
   }
 
   private void handleCommandSwitchOpMode(String extra) {
-    opModeManager.switchOpModes(extra);
+    String newOpMode = extra;
+    if (eventLoopManager.state != EventLoopManager.State.RUNNING){
+      newOpMode = OpModeManager.DEFAULT_OP_MODE_NAME;
+    }
+    opModeManager.switchOpModes(newOpMode);
     eventLoopManager.sendCommand(new Command(CommandList.CMD_SWITCH_OP_MODE_RESP, opModeManager.getActiveOpModeName()));
   }
 }

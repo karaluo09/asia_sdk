@@ -48,6 +48,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.qualcomm.ftccommon.DbgLog;
@@ -131,10 +132,13 @@ public class FtcConfigurationActivity extends Activity{
         AlertDialog.Builder builder = utility.buildBuilder("Devices", "These are the devices " +
             "discovered by the Hardware Wizard. You can click on the name of each device to edit" +
             " the information relating to that device. Make sure each device has a unique name. " +
-            "The names should match what is in the Op mode code. You can scroll down to see more " +
+            "The names should match what is in the Op mode code. Scroll down to see more " +
             "devices if there are any.");
         builder.setPositiveButton("Ok", close_ok_listener);
-        builder.show();
+        AlertDialog alert = builder.create();
+        alert.show();
+        TextView textView = (TextView) alert.findViewById(android.R.id.message);
+        textView.setTextSize(14);
       }
     });
 
@@ -146,7 +150,10 @@ public class FtcConfigurationActivity extends Activity{
             "save button will create an xml file in: \n      /sdcard/FIRST/  \nThis file will be used to " +
             "initialize the robot.");
         builder.setPositiveButton("Ok", close_ok_listener);
-        builder.show();
+        AlertDialog alert = builder.create();
+        alert.show();
+        TextView textView = (TextView) alert.findViewById(android.R.id.message);
+        textView.setTextSize(14);
       }
     });
   }
@@ -401,6 +408,11 @@ public class FtcConfigurationActivity extends Activity{
       DialogInterface.OnClickListener ok_listener = new DialogInterface.OnClickListener(){
         public void onClick(DialogInterface dialog, int button){
           String filename = input.getText().toString()+Utility.FILE_EXT;
+          filename = filename.trim();
+          if (filename.equals(".xml")){
+            utility.complainToast("File not saved: Please entire a filename.", context);
+            return;
+          }
           try {
             utility.writeToFile(filename);
           } catch (RobotCoreException e) {
@@ -464,6 +476,11 @@ public class FtcConfigurationActivity extends Activity{
     DialogInterface.OnClickListener ok_listener = new DialogInterface.OnClickListener(){
       public void onClick(DialogInterface dialog, int button){
         String filename = input.getText().toString()+Utility.FILE_EXT;
+        filename = filename.trim();
+        if (filename.equals(".xml")){
+          utility.complainToast("File not saved: Please entire a filename.", context);
+          return;
+        }
         try {
           utility.writeToFile(filename);
         } catch (RobotCoreException e) {

@@ -92,7 +92,10 @@ public class FtcLoadFileActivity extends Activity {
             " the edit button. The 'Activate' button will set that file as the current" +
             " configuration file, which will be used to start the robot.");
         builder.setPositiveButton("Ok", close_ok_listener);
-        builder.show();
+        AlertDialog alert = builder.create();
+        alert.show();
+        TextView textView = (TextView) alert.findViewById(android.R.id.message);
+        textView.setTextSize(14);
       }
     });
 
@@ -107,7 +110,10 @@ public class FtcLoadFileActivity extends Activity {
             " one Motor Controller, with a motor in port 1 and 2. If there are other devices " +
             "attached, the AutoConfigure tool will not name them.");
         builder.setPositiveButton("Ok", close_ok_listener);
-        builder.show();
+        AlertDialog alert = builder.create();
+        alert.show();
+        TextView textView = (TextView) alert.findViewById(android.R.id.message);
+        textView.setTextSize(14);
       }
     });
   }

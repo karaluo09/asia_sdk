@@ -54,8 +54,7 @@ public class Robot {
   public ArrayBlockingQueue<RobocolDatagram> sendQueue = null;
   public ArrayBlockingQueue<RobocolDatagram> eventQueue = null;
 
-  public void start(InetAddress driverStationAddr, InetAddress peerDiscoveryManagerAddr,
-      EventLoop eventLoop) throws RobotCoreException {
+  public void start(InetAddress driverStationAddr, InetAddress peerDiscoveryManagerAddr, EventLoop eventLoop) throws RobotCoreException {
     try {
       socket.listen(driverStationAddr);
       socket.connect(driverStationAddr);

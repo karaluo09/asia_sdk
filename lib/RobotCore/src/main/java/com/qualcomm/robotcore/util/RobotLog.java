@@ -51,6 +51,8 @@ public class RobotLog {
    */
   private RobotLog() {}
 
+  private static String globalErrorMessage = "";
+
   public static final String TAG = "RobotCore";
 
   private static boolean writeLogcatToDiskEnabled = false;
@@ -99,6 +101,68 @@ public class RobotLog {
   }
 
   /**
+   * Set a global error message
+   *
+   * This message stays set until clearGlobalErrorMsg is called. Additional
+   * calls to set the global error message will be silently ignored until the
+   * current error message is cleared.
+   *
+   * This is so that if multiple global error messages are raised, the first
+   * error message is captured.
+   *
+   * @param message error message
+   */
+  public static void setGlobalErrorMsg(String message) {
+    // don't allow a new error message to overwrite the old error message
+    if (globalErrorMessage.isEmpty()) {
+      globalErrorMessage += message; // using += to force a null pointer exception if message is null
+    }
+  }
+
+  /**
+   * Set a global error message
+   *
+   * Sets the global error message, with the exceptions message appended. Then it rethrows the
+   * given exception.
+   *
+   * @param message error message
+   * @param e a RobotCoreException
+   * @throws RobotCoreException
+   */
+  public static void setGlobalErrorMsgAndThrow(String message, RobotCoreException e) throws RobotCoreException {
+    setGlobalErrorMsg(message + "\n" + e.getMessage());
+    throw e;
+  }
+
+  /**
+   * Get the current global error message
+   * @return error message
+   */
+  public static String getGlobalErrorMsg() {
+    return globalErrorMessage;
+  }
+
+  /**
+   * Returns true if a global error message is set
+   * @return true if there is an error message
+   */
+  public static boolean hasGlobalErrorMsg() {
+    return !globalErrorMessage.isEmpty();
+  }
+
+  /**
+   * Clears the current global error message.
+   */
+  public static void clearGlobalErrorMsg() {
+    globalErrorMessage = "";
+  }
+
+  public static void logAndThrow(String errMsg) throws RobotCoreException {
+    w(errMsg);
+    throw new RobotCoreException(errMsg);
+  }
+
+  /**
    * Write logcat logs to disk. This method will continue writing logcat files for as long as the
    * program runs. Additional calls to this method will be a NOOP.
    *
@@ -118,12 +182,13 @@ public class RobotLog {
         try {
 
           final String filter = "UsbRequestJNI:S UsbRequest:S *:V";
+          final int maxRotatedLogs = 1;
 
           RobotLog.v("saving logcat to " + filename);
           RunShellCommand shell = new RunShellCommand();
           RunShellCommand.killSpawnedProcess("logcat", packageName, shell);
-          shell.run(String.format("logcat -f %s.logcat -r%d -v time %s", filename, fileSizeKb,
-              filter));
+          shell.run(String.format("logcat -f %s.logcat -r%d -n%d-v time %s",
+              filename, fileSizeKb, maxRotatedLogs, filter));
         } catch (RobotCoreException e) {
           RobotLog.v("Error while writing log file to disk: " + e.toString());
         } finally {

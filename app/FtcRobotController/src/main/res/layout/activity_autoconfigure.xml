@@ -13,10 +13,10 @@
     android:layout_height="wrap_content">
 
   <LinearLayout
+    android:paddingBottom="8dp"
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/activity_vertical_margin"
-    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingTop="5dp"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical">
@@ -25,11 +25,13 @@
       android:id="@+id/configureButton"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
+      android:textSize="12sp"
+      android:minHeight="0dp"
+      android:minWidth="0dp"
       android:text="@string/autoconfigure" />
 
     <TextView
       android:id="@+id/configureButton_text"
-      android:layout_marginBottom="30dp"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:text="@string/autoconfigureButton_text"/>
@@ -46,9 +48,5 @@
       android:layout_height="wrap_content"
       android:layout_gravity="center"/>
   </LinearLayout>
-
-
-
-  </ScrollView>
-
+ </ScrollView>
 </RelativeLayout>

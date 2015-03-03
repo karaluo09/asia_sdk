@@ -143,4 +143,18 @@ public class DcMotor {
   public boolean getPowerFloat() {
     return controller.getMotorPowerFloat(portNumber);
   }
+
+  /**
+   * mock API
+   *
+   * TODO: decide if we want to remove or implement this API
+   */
+
+  public interface MotorCallback {
+    public void encoder(int value);
+  }
+
+  public void getEncoders(MotorCallback calllback) {
+
+  }
 }

@@ -5,7 +5,7 @@
   <string name="gamepad_logitech_f310">Logitech F310 Gamepad</string>
   <string name="gamepad_microsoft_xbox_360">Microsoft XBox 360 Gamepad</string>
   <string name="gamepad_android_standard">Standard Android Gamepad</string>
-  <string name="gamepad_default">@string/gamepad_android_standard</string>
+  <string name="gamepad_default">@string/gamepad_logitech_f310</string>
 
   <!-- App Package Strings -->
   <string name="app_name">FTC Driver Station</string>
@@ -30,25 +30,30 @@
     <item>@string/gamepad_android_standard</item>
   </string-array>
 
+  <string name="pref_logging_title">Logging</string>
+  <string name="pref_log_network_traffic_title">Log Network Traffic</string>
+  <string name="pref_log_network_traffic_summary">Save network data to logs; this will generate a large volume of logs</string>
+  <string name="pref_log_network_traffic_key">pref_log_network_traffic</string>
+
   <!-- Wifi Channel Selector -->
   <string-array name="wifi_direct_channels">
-    <item>SELECT A CHANNEL</item>
-    <item>Class 81 Channel 1</item>
-    <item>Class 81 Channel 6</item>
-    <item>Class 81 Channel 11</item>
+    <item>Auto - device selects channel</item>
+    <item>2.4GHz, Channel 1</item>
+    <item>2.4GHz, Channel 6</item>
+    <item>2.4GHz, Channel 11</item>
     <!--
-    <item>Class 115 Channel 36</item>
-    <item>Class 115 Channel 40</item>
-    <item>Class 115 Channel 44</item>
-    <item>Class 115 Channel 48</item>
+    <item>5GHz, Channel 36</item>
+    <item>5GHz, Channel 40</item>
+    <item>5GHz, Channel 44</item>
+    <item>5GHz, Channel 48</item>
     -->
-    <item>Class 124 Channel 149</item>
-    <item>Class 124 Channel 153</item>
-    <item>Class 124 Channel 157</item>
-    <item>Class 124 Channel 161</item>
+    <item>5GHz, Channel 149</item>
+    <item>5GHz, Channel 153</item>
+    <item>5GHz, Channel 157</item>
+    <item>5GHz, Channel 161</item>
   </string-array>
 
-  <string name="configure_settings">Configure WiFi Direct</string>
+  <string name="configure_settings">Configure</string>
   <string name="launch_wifi_settings">Launch WiFi Settings</string>
   <string name="restore_settings">Restore Saved WiFi Settings</string>
 
@@ -61,5 +66,11 @@
   <string name="label_stop">Stop</string>
 
   <string name="dialog_title_select_op_mode">Select Op Mode</string>
+
+  <!-- Fix Misconfigured Wifi Direct -->
+  <string name="title_activity_config_wifi_direct">Configure Wifi Direct</string>
+  <string name="wifi_direct_update_settings">
+    Please wait while we update the Wifi Direct settings on this device.
+  </string>
 
 </resources>

@@ -81,8 +81,6 @@ public class AutoConfigureActivity extends Activity {
   private Thread t;
   private Utility utility;
 
-  private static final boolean JONATHAN_TELEOP = true;
-
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -140,12 +138,7 @@ public class AutoConfigureActivity extends Activity {
                 deviceControllers = new HashMap<SerialNumber, ControllerConfiguration>();
 
                 utility.createLists(entries, deviceControllers);
-                boolean foundRightDevices = false;
-                if (JONATHAN_TELEOP) {
-                  foundRightDevices = checkForDevices();
-                } else {
-                  foundRightDevices = buildK9();
-                }
+                boolean foundRightDevices = buildK9();
                 if (foundRightDevices) {
                   writeFile();
                 } else {
@@ -274,45 +267,6 @@ public class AutoConfigureActivity extends Activity {
     legacyController.addDevices(devices);
   }
 
-
- // Returns true if the right devices have been found and constructed
-  private boolean checkForDevices(){
-    boolean needMotorController = true;
-    boolean needServoController = true;
-    boolean needLegacyController = true;
-    for (Map.Entry entry : entries){
-      DeviceManager.DeviceType type = (DeviceManager.DeviceType) entry.getValue();
-      if (type == DeviceType.HITECHNIC_USB_DC_MOTOR_CONTROLLER &&
-          needMotorController){
-        nameMotors((SerialNumber) entry.getKey(), "right", "left");
-        needMotorController = false;
-      }
-      if (type == DeviceType.HITECHNIC_USB_SERVO_CONTROLLER &&
-          needServoController){
-        ArrayList<String> names = new ArrayList<String>();
-        names.add("a");
-        names.add("b");
-        names.add(DeviceConfiguration.DISABLED_DEVICE_NAME);
-        names.add(DeviceConfiguration.DISABLED_DEVICE_NAME);
-        names.add(DeviceConfiguration.DISABLED_DEVICE_NAME);
-        names.add(DeviceConfiguration.DISABLED_DEVICE_NAME);
-        nameServos((SerialNumber) entry.getKey(), names);
-        needServoController = false;
-      }
-      if (type == DeviceType.HITECHNIC_USB_LEGACY_MODULE &&
-          needLegacyController){
-        nameLegacy((SerialNumber)entry.getKey());
-        needLegacyController = false;
-      }
-    }
-    if (needMotorController || needServoController || needLegacyController){
-      return false;
-    }
-    LinearLayout autoconfigure_info = (LinearLayout) findViewById(R.id.autoconfigure_info);
-    autoconfigure_info.removeAllViews();
-    return true;
-  }
-
   private MotorControllerConfiguration nameMotors(SerialNumber serialNumber, String port1Name, String port2Name){
     MotorControllerConfiguration motorController;
     if (!serialNumber.equals(ControllerConfiguration.NO_SERIAL_NUMBER)) {
@@ -331,22 +285,6 @@ public class AutoConfigureActivity extends Activity {
 
     return motorController;
 
-  }
-
-  private void nameLegacy(SerialNumber serialNumber){
-    LegacyModuleControllerConfiguration legacyController = (LegacyModuleControllerConfiguration) deviceControllers.get(serialNumber);
-    DeviceConfiguration port0 = new DeviceConfiguration(0);
-    MotorControllerConfiguration motorController = nameMotors(ControllerConfiguration.NO_SERIAL_NUMBER, "flag", "arm");
-    motorController.setName("Legacy Motor Controller");
-
-    ArrayList<DeviceConfiguration> devices = new ArrayList<DeviceConfiguration>();
-    devices.add(port0);
-    devices.add(motorController);
-    for (int i = 2; i < 6; i++){
-      DeviceConfiguration nothing = new DeviceConfiguration(i);
-      devices.add(nothing);
-    }
-    legacyController.addDevices(devices);
   }
 
   private ServoControllerConfiguration nameServos(SerialNumber serialNumber, ArrayList<String> names){

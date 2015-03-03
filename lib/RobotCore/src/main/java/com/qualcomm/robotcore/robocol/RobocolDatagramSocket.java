@@ -70,7 +70,7 @@ public class RobocolDatagramSocket {
 
       try {
          socket.send(message.getPacket());
-         if (DEBUG) RobotLog.v("sent network packet");
+         if (DEBUG) RobotLog.v("sent network packet to " + message.getPacket().getAddress().toString());
       } catch (IllegalArgumentException e) {
          RobotLog.w("Unable to send RobocolDatagram: " + e.toString());
          RobotLog.w("               " + message.toString());
@@ -92,7 +92,7 @@ public class RobocolDatagramSocket {
 
       try {
          socket.receive(packetRecv);
-         if (DEBUG) RobotLog.v("received network packet");
+         if (DEBUG) RobotLog.v("received network packet from " + packetRecv.getAddress().toString());
       } catch (PortUnreachableException e) {
          RobotLog.d("RobocolDatagramSocket receive error: remote port unreachable");
          return null;

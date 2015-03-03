@@ -31,19 +31,37 @@
         android:text="" />
 
     <TextView
+      android:id="@+id/textOpMode"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_below="@+id/textRobotStatus"
+      android:text="" />
+
+    <TextView
+      android:id="@+id/textErrorMessage"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_below="@+id/textOpMode"
+      android:textColor="#990000"
+      android:textStyle="bold"
+      android:minLines="2"
+      android:maxLines="2"
+      android:text="" />
+
+    <TextView
         android:id="@+id/textGamepad1"
         android:layout_width="match_parent"
-        android:layout_height="22dp"
+        android:layout_height="35dp"
         android:layout_above="@+id/textGamepad2"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="10dp"
         android:text="" />
 
     <TextView
         android:id="@+id/textGamepad2"
         android:layout_width="match_parent"
-        android:layout_height="22dp"
+        android:layout_height="35dp"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="20dp"
         android:text="" />
 
   </RelativeLayout>

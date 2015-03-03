@@ -81,7 +81,7 @@ public class MockDeviceManager extends DeviceManager {
     devices.put(new SerialNumber("7"), DeviceType.HITECHNIC_USB_DC_MOTOR_CONTROLLER);
     devices.put(new SerialNumber("6"), DeviceType.HITECHNIC_USB_SERVO_CONTROLLER);
     devices.put(new SerialNumber("5"), DeviceType.HITECHNIC_USB_LEGACY_MODULE);
-    devices.put(new SerialNumber("8"), DeviceType.HITECHNIC_USB_DC_MOTOR_CONTROLLER);
+    //devices.put(new SerialNumber("8"), DeviceType.HITECHNIC_USB_DC_MOTOR_CONTROLLER);
 
   }
 

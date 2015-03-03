@@ -38,14 +38,16 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.graphics.Color;
 import android.hardware.usb.UsbManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Message;
 import android.preference.PreferenceManager;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.LinearLayout;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -65,6 +67,7 @@ import com.qualcomm.robotcore.hardware.ServoController;
 import com.qualcomm.robotcore.hardware.configuration.Utility;
 import com.qualcomm.robotcore.hardware.mock.MockDeviceManager;
 import com.qualcomm.robotcore.hardware.mock.MockHardwareFactory;
+import com.qualcomm.robotcore.util.ImmersiveMode;
 import com.qualcomm.robotcore.util.RobotLog;
 import com.qualcomm.robotcore.util.SerialNumber;
 import com.qualcomm.robotcore.wifi.WifiDirectAssistant;
@@ -72,8 +75,7 @@ import com.qualcomm.robotcore.wifi.WifiDirectAssistant;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 
-public class FtcRobotControllerActivity extends Activity
-    implements FtcRobotControllerService.Callback {
+public class FtcRobotControllerActivity extends Activity {
 
   private static final boolean USE_MOCK_HARDWARE_FACTORY = false;
   private static final int NUM_GAMEPADS = 2;
@@ -112,24 +114,85 @@ public class FtcRobotControllerActivity extends Activity
       t.start();
     }
 
-    public void updateGamepadUi(final Gamepad[] gamepads) {
-      if (gamepads.length != textGamepad.length) {
-        DbgLog.msg("Unable to update gamepad UI");
-      }
-
+    public void updateUi(final String opModeName, final Gamepad[] gamepads) {
       runOnUiThread(new Runnable() {
         @Override
         public void run() {
-          for (int i = 0; i < textGamepad.length; i++) {
+          for (int i = 0; (i < textGamepad.length) && (i < gamepads.length); i++) {
             if (gamepads[i].id == Gamepad.ID_UNASSOCIATED) {
               textGamepad[i].setText(" "); // for some reason "" isn't working, android won't redraw the UI element
             } else {
               textGamepad[i].setText(gamepads[i].toString());
             }
           }
+
+          textOpMode.setText("Op Mode: " + opModeName);
+
+          // if there are no global error messages, getGlobalErrorMsg will return an empty string
+          textErrorMessage.setText(RobotLog.getGlobalErrorMsg());
         }
       });
     }
+
+    public void wifiDirectUpdate(final WifiDirectAssistant.Event event) {
+      String status = "Wifi Direct - ";
+
+      switch (event) {
+        case DISCONNECTED:
+          status += "disconnected";
+          break;
+        case DISCOVERING_PEERS:
+        case PEERS_AVAILABLE:
+          status += String.format("looking for driver station (MAC address %s)",
+              controllerService.getDriverStationMac());
+          break;
+        case CONNECTING:
+          status += String.format("connecting to driver station (MAC address %s)",
+              controllerService.getDriverStationMac());
+          break;
+        case CONNECTED_AS_PEER:
+          status += String.format("connected to driver station (MAC address %s)",
+              controllerService.getDriverStationMac());
+          break;
+        case CONNECTION_INFO_AVAILABLE:
+          if (checkWifiDirectConnectionIsOk() == false) {
+            configureWifiDirect();
+          }
+
+          status += String.format("connected to driver station (MAC address %s)",
+              controllerService.getDriverStationMac());
+
+          break;
+        case ERROR:
+          status += "ERROR";
+          break;
+        default:
+          status += "unexpected state: " + event.name();
+          break;
+      }
+
+      DbgLog.msg(status);
+      final String finalStatus = status;
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          textWifiDirectStatus.setText(finalStatus);
+        }
+      });
+    }
+
+    public void robotUpdate(final String status) {
+      DbgLog.msg(status);
+      runOnUiThread(new Runnable() {
+        @Override
+        public void run() {
+          textRobotStatus.setText(status);
+
+          // if there are no global error messages, getGlobalErrorMsg will return an empty string
+          textErrorMessage.setText(RobotLog.getGlobalErrorMsg());        }
+      });
+    }
+
   }
 
   protected SharedPreferences preferences;
@@ -137,12 +200,14 @@ public class FtcRobotControllerActivity extends Activity
   protected Callback callback = new Callback();
   protected Context context;
   private Utility utility;
-  private String activeFilename;
   private boolean launched;
 
   protected TextView textWifiDirectStatus;
   protected TextView textRobotStatus;
   protected TextView[] textGamepad = new TextView[NUM_GAMEPADS];
+  protected TextView textOpMode;
+  protected TextView textErrorMessage;
+  protected ImmersiveMode immersion;
 
   protected FtcRobotControllerService controllerService;
 
@@ -181,8 +246,12 @@ public class FtcRobotControllerActivity extends Activity
 
     textWifiDirectStatus = (TextView) findViewById(R.id.textWifiDirectStatus);
     textRobotStatus = (TextView) findViewById(R.id.textRobotStatus);
+    textOpMode = (TextView) findViewById(R.id.textOpMode);
+    textErrorMessage = (TextView) findViewById(R.id.textErrorMessage);
     textGamepad[0] = (TextView) findViewById(R.id.textGamepad1);
     textGamepad[1] = (TextView) findViewById(R.id.textGamepad2);
+    //decorView = getWindow().getDecorView();
+    immersion = new ImmersiveMode(getWindow().getDecorView());
 
     PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
     preferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -219,6 +288,23 @@ public class FtcRobotControllerActivity extends Activity
 
     if (controllerService != null) unbindService(connection);
   }
+
+  @Override
+  public void onWindowFocusChanged(boolean hasFocus){
+    super.onWindowFocusChanged(hasFocus);
+    // When the window loses focus (e.g., the action overflow is shown),
+    // cancel any pending hide action. When the window gains focus,
+    // hide the system UI.
+    if (hasFocus) {
+      if (ImmersiveMode.apiOver19()){
+        // Immersive flag only works on API 19 and above.
+        immersion.hideSystemUI();
+      }
+    } else {
+      immersion.cancelSystemUIHide();
+    }
+  }
+
 
   @Override
   public boolean onCreateOptionsMenu(Menu menu) {
@@ -265,66 +351,16 @@ public class FtcRobotControllerActivity extends Activity
     DbgLog.msg("Bound to Ftc Controller Service");
     controllerService = service;
 
-    wifiDirectUpdate(controllerService.getWifiDirectStatus());
-    robotUpdate(controllerService.getRobotStatus());
+    callback.wifiDirectUpdate(controllerService.getWifiDirectStatus());
+    callback.robotUpdate(controllerService.getRobotStatus());
     requestRobotSetup();
-  }
-
-  @Override
-  public void wifiDirectUpdate(final WifiDirectAssistant.Event event) {
-    String status = "Wifi Direct - ";
-
-    switch (event) {
-      case DISCONNECTED:
-        status += "disconnected";
-        break;
-      case DISCOVERING_PEERS:
-      case PEERS_AVAILABLE:
-        status += String.format("looking for driver station (MAC address %s)",
-            controllerService.getDriverStationMac());
-        break;
-      case CONNECTING:
-        status += String.format("connecting to driver station (MAC address %s)",
-            controllerService.getDriverStationMac());
-        break;
-      case CONNECTED_AS_PEER:
-        status += String.format("connected to driver station (MAC address %s)",
-            controllerService.getDriverStationMac());
-        break;
-      case ERROR:
-        status += "ERROR";
-        break;
-      default:
-        status += "unexpected state: " + event.name();
-        break;
-    }
-
-    DbgLog.msg(status);
-    final String finalStatus = status;
-    runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        textWifiDirectStatus.setText(finalStatus);
-      }
-    });
-  }
-
-  @Override
-  public void robotUpdate(final String status) {
-    DbgLog.msg(status);
-    runOnUiThread(new Runnable() {
-      @Override
-      public void run() {
-        textRobotStatus.setText(status);
-      }
-    });
   }
 
   private void requestRobotSetup() {
     if (controllerService == null) return;
 
     boolean hasConfigFile = preferences.contains(getString(R.string.pref_hardware_config_filename));
-    activeFilename = utility.getFilenameFromPrefs(R.string.pref_hardware_config_filename, Utility.NO_FILE);
+    String activeFilename = utility.getFilenameFromPrefs(R.string.pref_hardware_config_filename, Utility.NO_FILE);
     if (!launched) {
       if (!hasConfigFile ||
           activeFilename.equalsIgnoreCase(Utility.NO_FILE) ||
@@ -387,7 +423,7 @@ public class FtcRobotControllerActivity extends Activity
 
     eventLoop = new FtcEventLoop(factory, callback);
 
-    controllerService.setCallback(this);
+    controllerService.setCallback(callback);
     controllerService.setupRobot(eventLoop);
   }
 
@@ -399,5 +435,20 @@ public class FtcRobotControllerActivity extends Activity
   private void requestRobotRestart() {
     requestRobotShutdown();
     requestRobotSetup();
+  }
+
+  private boolean checkWifiDirectConnectionIsOk() {
+    DbgLog.msg("Checking wifi direct connection");
+
+    String requestedMac = controllerService.getDriverStationMac();
+    String connectedMac = controllerService.getWifiDirectAssistant().getGroupOwnerMacAddress();
+
+    return requestedMac.equals(connectedMac);
+  }
+
+
+  private void configureWifiDirect() {
+    DbgLog.msg("launching activity to configure wifi direct");
+    startActivity(new Intent(getBaseContext(), ConfigWifiDirectActivity.class));
   }
 }

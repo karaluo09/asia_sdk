@@ -41,9 +41,10 @@ import java.nio.ByteBuffer;
  * <p>
  * Used to know if the connection between the client/server is still alive
  */
+@SuppressWarnings("unused")
 public class Heartbeat implements RobocolParsable {
 
-  public enum Token { EMPTY };
+  public enum Token { EMPTY }
 
   public static final short PAYLOAD_SIZE = 10;
   public static final short BUFFER_SIZE = PAYLOAD_SIZE + RobocolParsable.HEADER_LENGTH;

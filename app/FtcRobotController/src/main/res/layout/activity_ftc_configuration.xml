@@ -12,7 +12,7 @@
       android:id="@+id/holdsDevices"
       android:layout_below="@id/included_header"
       android:layout_above="@+id/scan_bottom"
-      android:paddingBottom="@dimen/activity_vertical_margin"
+      android:paddingBottom="8dp"
       android:paddingLeft="@dimen/activity_horizontal_margin"
       android:paddingRight="@dimen/activity_horizontal_margin"
       android:paddingTop="5dp"
@@ -24,6 +24,9 @@
         android:id="@+id/scanButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:minHeight="0dp"
+        android:minWidth="0dp"
         android:text="@string/scan" />
 
       <TextView
@@ -57,13 +60,11 @@
           android:layout_width="wrap_content"
           android:layout_height="wrap_content"
           android:textStyle="bold"
-          android:textSize="18sp"/>
+          android:textSize="16sp"/>
 
         <include
           layout="@layout/info_button"
           android:id="@+id/devices_info_btn"
-          android:layout_width="60dp"
-          android:layout_height="60dp"
           android:onClick="devices_info"/>
 
       </RelativeLayout>
@@ -100,8 +101,8 @@
     android:orientation="vertical"
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/activity_vertical_margin"
-    android:paddingBottom="@dimen/activity_vertical_margin">
+    android:paddingTop="8dp"
+    android:paddingBottom="5dp">
 
     <!-- red line -->
     <View
@@ -118,8 +119,10 @@
       android:id="@+id/writeXML"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:layout_marginBottom="3dp"
       android:onClick="saveConfiguration"
+      android:textSize="12sp"
+      android:minHeight="0dp"
+      android:minWidth="0dp"
       android:text="@string/save_configuration" />
 
     <include
@@ -132,7 +135,7 @@
 
     <TextView
       android:id="@+id/writeXML_text"
-      android:layout_marginBottom="30dp"
+      android:layout_marginBottom="5dp"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:text="@string/writeXML_text"/>

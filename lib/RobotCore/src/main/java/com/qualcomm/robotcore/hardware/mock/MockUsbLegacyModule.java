@@ -31,7 +31,6 @@
 package com.qualcomm.robotcore.hardware.mock;
 
 import com.qualcomm.robotcore.hardware.DeviceManager.DeviceType;
-import com.qualcomm.robotcore.hardware.DigitalChannelController;
 import com.qualcomm.robotcore.hardware.LegacyModule;
 
 /**
@@ -39,39 +38,10 @@ import com.qualcomm.robotcore.hardware.LegacyModule;
  *
  * Use {@link MockDeviceManager} to create an instance of this class
  */
-public class MockUsbLegacyModule extends MockUsbDevice
-  implements LegacyModule, DigitalChannelController {
+public class MockUsbLegacyModule extends MockUsbDevice implements LegacyModule {
 
-  /**
-   * Use MockUsbDeviceManager to create an instance of this class
-   *
-   * @param serialNumber
-   * @param device
-   * @param maxAddress
-   */
   protected MockUsbLegacyModule(String serialNumber, DeviceType type) {
-
     super(serialNumber, type);
-  }
-
-  @Override
-  public Mode getDigitalChannelMode(int channel) {
-    return Mode.OUTPUT;
-  }
-
-  @Override
-  public void setDigitalChannelMode(int channel, Mode mode) {
-
-  }
-
-  @Override
-  public boolean getDigitalChannelState(int channel) {
-    return false;
-  }
-
-  @Override
-  public void setDigitalChannelState(int channel, boolean state) {
-
   }
 
   @Override
@@ -80,7 +50,7 @@ public class MockUsbLegacyModule extends MockUsbDevice
   }
 
   @Override
-  public void enableNxI2ctWriteMode(int physicalPort, int i2cAddress, int memAddress, byte[] initialValues) {
+  public void enableNxtI2ctWriteMode(int physicalPort, int i2cAddress, int memAddress, byte[] initialValues) {
 
   }
 
@@ -113,6 +83,10 @@ public class MockUsbLegacyModule extends MockUsbDevice
   public byte[] readAnalog(int physicalPort) {
     return new byte[0];
   }
+
+  @Override
+  public boolean isPortReady(int physicalPort) { return true; }
+
 
   @Override
   public String getDeviceName() {

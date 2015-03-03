@@ -53,6 +53,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class WifiDirectAssistant {
 
   public interface WifiDirectAssistantCallback {
@@ -75,7 +76,11 @@ public class WifiDirectAssistant {
   private ConnectStatus connectStatus = ConnectStatus.NOT_CONNECTED;
   private Event lastEvent = null;
 
+  private String deviceMacAddress = "";
+  private String deviceName = "";
   private InetAddress groupOwnerAddress = null;
+  private String groupOwnerMacAddress = "";
+  private String groupOwnerName = "";
   private String passphrase = "";
 
   private WifiDirectAssistantCallback callback = null;
@@ -88,7 +93,7 @@ public class WifiDirectAssistant {
     CONNECTED_AS_PEER,
     CONNECTED_AS_GROUP_OWNER,
     DISCONNECTED,
-    PASSPHRASE_AVAILABLE,
+    CONNECTION_INFO_AVAILABLE,
     ERROR
   }
 
@@ -123,7 +128,7 @@ public class WifiDirectAssistant {
 
       sendEvent(Event.PEERS_AVAILABLE);
     }
-  };
+  }
 
   /*
    * Updates when this device connects
@@ -133,6 +138,7 @@ public class WifiDirectAssistant {
     @Override
     public void onConnectionInfoAvailable(final WifiP2pInfo info) {
 
+      wifiP2pManager.requestGroupInfo(wifiP2pChannel, groupInfoListener);
       groupOwnerAddress = info.groupOwnerAddress;
       RobotLog.d("Group owners address: " + groupOwnerAddress.toString());
 
@@ -158,10 +164,23 @@ public class WifiDirectAssistant {
     public void onGroupInfoAvailable(WifiP2pGroup group) {
       if (group == null) return;
 
-      passphrase = group.getPassphrase();
-      sendEvent(Event.PASSPHRASE_AVAILABLE);
-    }
+      if (group.isGroupOwner()) {
+        groupOwnerMacAddress = deviceMacAddress;
+        groupOwnerName = deviceName;
+      } else {
+        WifiP2pDevice go = group.getOwner();
+        groupOwnerMacAddress = go.deviceAddress;
+        groupOwnerName = go.deviceName;
+      }
 
+      passphrase = group.getPassphrase();
+
+      // make sure passphase isn't null
+      passphrase = (passphrase != null) ? passphrase : "";
+
+      RobotLog.v("Wifi Direct connection information available");
+      sendEvent(Event.CONNECTION_INFO_AVAILABLE);
+    }
   }
 
   private class WifiP2pBroadcastReceiver extends BroadcastReceiver {
@@ -177,7 +196,7 @@ public class WifiDirectAssistant {
         RobotLog.d("Wifi Direct peers changed");
         wifiP2pManager.requestPeers(wifiP2pChannel, peerListListener);
       } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
-        NetworkInfo networkInfo = (NetworkInfo) intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
+        NetworkInfo networkInfo = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
         RobotLog.d("Wifi Direct connection changed - connected: " + networkInfo.isConnected());
         if (networkInfo.isConnected()) {
           wifiP2pManager.requestConnectionInfo(wifiP2pChannel, connectionListener);
@@ -191,8 +210,7 @@ public class WifiDirectAssistant {
         }
       } else if (WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION.equals(action)) {
         RobotLog.d("Wifi Direct this device changed");
-        onWifiP2pThisDeviceChanged(
-            (WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE));
+        onWifiP2pThisDeviceChanged((WifiP2pDevice) intent.getParcelableExtra(WifiP2pManager.EXTRA_WIFI_P2P_DEVICE));
       }
     }
   }
@@ -245,8 +263,7 @@ public class WifiDirectAssistant {
   }
 
   public List<WifiP2pDevice> getPeers() {
-    List<WifiP2pDevice> peersCopy = new ArrayList<WifiP2pDevice>(peers);
-    return peersCopy;
+    return new ArrayList<WifiP2pDevice>(peers);
   }
 
   public WifiDirectAssistantCallback getCallback() {
@@ -257,10 +274,50 @@ public class WifiDirectAssistant {
     this.callback = callback;
   }
 
+  /**
+   * Get the device mac address
+   * @return mac address
+   */
+  public String getDeviceMacAddress() {
+    return deviceMacAddress;
+  }
+
+  /**
+   * Get the device name
+   * @return device name
+   */
+  public String getDeviceName() {
+    return deviceName;
+  }
+
+  /**
+   * Get the IP address of the group owner
+   * @return ip address
+   */
   public InetAddress getGroupOwnerAddress() {
     return groupOwnerAddress;
   }
 
+  /**
+   * Get the group owners mac address
+   * @return mac address
+   */
+  public String getGroupOwnerMacAddress() {
+    return groupOwnerMacAddress;
+  }
+
+  /**
+   * Get the group owners device name
+   * @return device name
+   */
+  public String getGroupOwnerName() {
+    return groupOwnerName;
+  }
+
+  /**
+   * Return the passphrase for this network; only valid if this device is the group owner
+   * @return the passphrase to this device
+   */
   public String getPassphrase() {
     return passphrase;
   }
@@ -331,8 +388,6 @@ public class WifiDirectAssistant {
         connectStatus = ConnectStatus.GROUP_OWNER;
         sendEvent(Event.GROUP_CREATED);
         RobotLog.d("Wifi Direct created group");
-
-        wifiP2pManager.requestGroupInfo(wifiP2pChannel, groupInfoListener);
       }
 
       @Override
@@ -340,8 +395,6 @@ public class WifiDirectAssistant {
         if (reason == WifiP2pManager.BUSY) {
           // most likely group is already created
           RobotLog.d("Wifi Direct cannot create group, does group already exist?");
-
-          wifiP2pManager.requestGroupInfo(wifiP2pChannel, groupInfoListener);
         } else {
           String reasonStr = failureReasonToString(reason);
           failureReason = reason;
@@ -351,6 +404,13 @@ public class WifiDirectAssistant {
         }
       }
     });
+  }
+
+  /**
+   * Remove a Wifi Direct group
+   */
+  public void removeGroup() {
+    wifiP2pManager.removeGroup(wifiP2pChannel, null);
   }
 
   public void connect(WifiP2pDevice peer) {
@@ -385,7 +445,9 @@ public class WifiDirectAssistant {
   }
 
   private void onWifiP2pThisDeviceChanged(WifiP2pDevice wifiP2pDevice) {
-    RobotLog.i("Wifi Direct details have changed");
+    deviceName = wifiP2pDevice.deviceName;
+    deviceMacAddress = wifiP2pDevice.deviceAddress;
+    RobotLog.v("Wifi Direct device information: " + deviceName + " " + deviceMacAddress);
   }
 
   public String getFailureReason() {

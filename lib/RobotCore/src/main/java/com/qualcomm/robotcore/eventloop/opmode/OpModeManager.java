@@ -209,6 +209,8 @@ public class OpModeManager {
       for (Map.Entry<String, LightSensor> light : hardwareMap.lightSensor.entrySet()) {
         light.getValue().enableLed(false);
       }
+
+      telemetry.addData("Status", "Robot is stopped");
     }
 
     @Override

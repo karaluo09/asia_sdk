@@ -32,17 +32,20 @@ package com.qualcomm.ftcdriverstation;
 
 import android.animation.ArgbEvaluator;
 import android.animation.ObjectAnimator;
-import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.Message;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
+import android.view.Gravity;
 import android.view.InputEvent;
 import android.view.KeyEvent;
 import android.view.Menu;
@@ -55,9 +58,11 @@ import android.widget.Toast;
 
 import com.qualcomm.ftccommon.CommandList;
 import com.qualcomm.ftccommon.DbgLog;
+import com.qualcomm.robotcore.eventloop.EventLoopManager;
 import com.qualcomm.robotcore.eventloop.opmode.OpModeManager;
 import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.configuration.Utility;
 import com.qualcomm.robotcore.hardware.logitech.LogitechGamepadF310;
 import com.qualcomm.robotcore.hardware.microsoft.MicrosoftGamepadXbox360;
 import com.qualcomm.robotcore.robocol.Command;
@@ -66,6 +71,7 @@ import com.qualcomm.robotcore.robocol.RobocolDatagram;
 import com.qualcomm.robotcore.robocol.RobocolDatagramSocket;
 import com.qualcomm.robotcore.robocol.Telemetry;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.ImmersiveMode;
 import com.qualcomm.robotcore.util.RobotLog;
 import com.qualcomm.robotcore.util.RollingAverage;
 import com.qualcomm.robotcore.util.Util;
@@ -263,11 +269,13 @@ public class FtcDriverStationActivity extends Activity
 
   protected static final int MAX_COMMAND_ATTEMPTS = 10;
 
+  protected static final int REQUEST_CONFIG_WIFI_CHANNEL = 1;
+
+  protected static final int MAX_LOG_SIZE = 2 * 1024; // in kilobytes
+
   protected boolean clientConnected = false;
 
-  @SuppressLint("UseSparseArrays")
   protected Map<Integer, Gamepad> gamepads = new HashMap<Integer, Gamepad>();
-  @SuppressLint("UseSparseArrays")
   protected Map<Integer, Integer> userToGamepadMap = new HashMap<Integer, Integer>();
 
   protected Heartbeat heartbeatSend = new Heartbeat();
@@ -302,6 +310,8 @@ public class FtcDriverStationActivity extends Activity
   protected TextView textOpModeLabel;
   protected TextView textOpModeName;
   protected TextView textTelemetry;
+  protected TextView systemTelemetry;
+  protected ImmersiveMode immersion;
 
   protected Button buttonStart;
   protected Button buttonStartTimed;
@@ -309,7 +319,10 @@ public class FtcDriverStationActivity extends Activity
   protected Button buttonStop;
 
   protected Context context;
+  protected Utility utility;
   protected SharedPreferences preferences;
+
+  protected boolean enableNetworkTrafficLogging = false;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -317,6 +330,7 @@ public class FtcDriverStationActivity extends Activity
     setContentView(R.layout.activity_ftc_driver_station);
 
     context = this;
+    utility = new Utility(this);
 
     textWifiDirectStatus = (TextView) findViewById(R.id.textWifiDirectStatus);
     textPingStatus = (TextView) findViewById(R.id.textPingStatus);
@@ -326,6 +340,8 @@ public class FtcDriverStationActivity extends Activity
     textOpModeLabel = (TextView) findViewById(R.id.textOpModeLabel);
     textOpModeName = (TextView) findViewById(R.id.textOpModeName);
     textTelemetry = (TextView) findViewById(R.id.textTelemetry);
+    systemTelemetry = (TextView) findViewById(R.id.textSystemTelemetry);
+    immersion = new ImmersiveMode(getWindow().getDecorView());
 
     buttonStart = (Button) findViewById(R.id.buttonStart);
     buttonStartTimed = (Button) findViewById(R.id.buttonStartTimed);
@@ -336,7 +352,7 @@ public class FtcDriverStationActivity extends Activity
     preferences = PreferenceManager.getDefaultSharedPreferences(this);
     preferences.registerOnSharedPreferenceChangeListener(this);
 
-    RobotLog.writeLogcatToDisk(this, 1024);
+    RobotLog.writeLogcatToDisk(this, MAX_LOG_SIZE);
 
     wifiDirect = WifiDirectAssistant.getWifiDirectAssistant(getApplicationContext());
     wifiDirect.setCallback(this);
@@ -357,6 +373,24 @@ public class FtcDriverStationActivity extends Activity
   @Override
   protected void onResume() {
     super.onResume();
+
+    enableNetworkTrafficLogging = preferences.getBoolean(getString(R.string.pref_log_network_traffic_key), false);
+  }
+
+  @Override
+  public void onWindowFocusChanged(boolean hasFocus){
+    super.onWindowFocusChanged(hasFocus);
+    // When the window loses focus (e.g., the action overflow is shown),
+    // cancel any pending hide action. When the window gains focus,
+    // hide the system UI.
+    if (hasFocus) {
+      if (ImmersiveMode.apiOver19()){
+        // Immersive flag only works on API 19 and above.
+        immersion.hideSystemUI();
+      }
+    } else {
+      immersion.cancelSystemUIHide();
+    }
   }
 
   @Override
@@ -377,21 +411,25 @@ public class FtcDriverStationActivity extends Activity
   }
 
   public void showToast(final String msg, final int duration) {
+    showToast(Toast.makeText(context, msg, duration));
+  }
+
+  public void showToast(final Toast toast) {
     runOnUiThread(new Runnable() {
       @Override
       public void run() {
-        Toast.makeText(context, msg, duration).show();
+        toast.show();
       }
     });
-    DbgLog.msg(msg);
   }
 
   @Override
   public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-    // TODO: enable different pref for each user
     if (key.equals(context.getString(R.string.pref_gamepad_type_key))) {
       gamepads.clear();
       userToGamepadMap.clear();
+    } else if (key.equals(context.getString(R.string.pref_log_network_traffic_key))) {
+      enableNetworkTrafficLogging = preferences.getBoolean(getString(R.string.pref_log_network_traffic_key), false);
     }
   }
 
@@ -415,7 +453,7 @@ public class FtcDriverStationActivity extends Activity
         pendingCommands.add(new Command(CommandList.CMD_RESTART_ROBOT));
         return true;
       case R.id.action_wifi_channel_selector:
-        startActivity(new Intent(getBaseContext(), FtcWifiChannelSelectorActivity.class));
+        startActivityForResult(new Intent(getBaseContext(), FtcWifiChannelSelectorActivity.class), REQUEST_CONFIG_WIFI_CHANNEL);
         return true;
       default:
         return super.onOptionsItemSelected(item);
@@ -426,6 +464,17 @@ public class FtcDriverStationActivity extends Activity
   public void onConfigurationChanged(Configuration newConfig) {
     super.onConfigurationChanged(newConfig);
     // don't destroy assets on screen rotation
+  }
+
+  @Override
+  protected void onActivityResult(int request, int result, Intent intent) {
+    if (request == REQUEST_CONFIG_WIFI_CHANNEL) {
+      if (result == RESULT_OK) {
+        Toast toast = Toast.makeText(context, "Configuration Complete", Toast.LENGTH_LONG);
+        toast.setGravity(Gravity.CENTER, 0, 0);
+        showToast(toast);
+      }
+    }
   }
 
   @Override
@@ -464,7 +513,11 @@ public class FtcDriverStationActivity extends Activity
           (new Thread(new SetupRunnable())).start();
         }
         break;
-      case PASSPHRASE_AVAILABLE:
+      case CONNECTED_AS_PEER:
+        DbgLog.error("Wifi Direct - connected as peer, was expecting Group Owner");
+        startActivity(new Intent(getBaseContext(), ConfigWifiDirectActivity.class));
+        break;
+      case CONNECTION_INFO_AVAILABLE:
         DbgLog.msg("Wifi Direct Passphrase: " + wifiDirect.getPassphrase());
         break;
       case DISCONNECTED:
@@ -560,7 +613,12 @@ public class FtcDriverStationActivity extends Activity
     try {
       heartbeatRecv.fromByteArray(packet.getData());
       double elapsedTime = heartbeatRecv.getElapsedTime();
+      int sequenceNumber = heartbeatRecv.getSequenceNumber();
       pingAverage.addNumber((int) (elapsedTime * 1000));
+
+      if (enableNetworkTrafficLogging) {
+        DbgLog.msg(String.format("Network - num: %5d, time: %7.4f", sequenceNumber, elapsedTime));
+      }
 
       // greater than one second since last UI update?
       if (lastUiUpdate.time() > 0.5) {
@@ -605,13 +663,14 @@ public class FtcDriverStationActivity extends Activity
 
   protected void telemetryEvent(RobocolDatagram packet) {
     String telemetryString = "";
-    Telemetry telemetry = null;
+    Telemetry telemetry;
     SortedSet<String> keys;
 
     try {
       telemetry = new Telemetry(packet.getData());
     } catch (RobotCoreException e) {
       DbgLog.logStacktrace(e);
+      return;
     }
 
     Map<String, String> strings = telemetry.getDataStrings();
@@ -627,8 +686,14 @@ public class FtcDriverStationActivity extends Activity
       telemetryString += key + ": " + numbers.get(key) + "\n";
     }
 
-    DbgLog.msg("TELEMETRY:\n" + telemetryString);
-    setTextView(textTelemetry, telemetryString);
+    String tag = telemetry.getTag();
+    if (tag.equals(EventLoopManager.SYSTEM_TELEMETRY)){
+      DbgLog.msg("System Telemetry event: " + telemetryString);
+      RobotLog.setGlobalErrorMsg(telemetryString);
+      setTextView(systemTelemetry, telemetryString);
+    } else {
+      setTextView(textTelemetry, telemetryString);
+    }
   }
 
   protected void assumeClientConnect() {
@@ -651,11 +716,13 @@ public class FtcDriverStationActivity extends Activity
     pingStatus("");
     pendingCommands.clear();
     remoteAddr = null;
+    RobotLog.clearGlobalErrorMsg();
 
     setTextView(textOpModeQueuedName, "");
     setTextView(textOpModeName, "");
     setTextView(buttonStop, getString(R.string.label_stop));
     setTextView(textTelemetry, "");
+    setTextView(systemTelemetry, "");
 
     setEnabled(buttonSelect, false);
     setEnabled(buttonStop, false);
@@ -805,9 +872,12 @@ public class FtcDriverStationActivity extends Activity
 
     if (gamepad.start && (gamepad.a || gamepad.b)) {
       int user = -1;
+
       if (gamepad.a) {
         user = 1;
-      } else if (gamepad.b) {
+      }
+
+      if (gamepad.b) {
         user = 2;
       }
       assignNewGamepad(user, event.getDeviceId());
@@ -818,7 +888,6 @@ public class FtcDriverStationActivity extends Activity
     String key = "";
 
     switch (user) {
-      // TODO: different pref for user 1 and 2
       case 1: key = getString(R.string.pref_gamepad_type_key); break;
       case 2: key = getString(R.string.pref_gamepad_type_key); break;
     }

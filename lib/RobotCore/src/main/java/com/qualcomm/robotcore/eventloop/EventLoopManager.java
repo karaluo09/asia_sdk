@@ -60,6 +60,8 @@ public class EventLoopManager {
   private static final int MAX_COMMAND_ATTEMPTS = 10;
   private static final int SOCKET_SCHEDULED_SEND_INTERVAL = 100; // in milliseconds
 
+  public final static String SYSTEM_TELEMETRY = "SYSTEM_TELEMETRY";
+
   // If no heartbeat is received in this amount of time, forceable shut down
   // the robot
   private static final double SECONDS_UNTIL_FORCED_SHUTDOWN = 2.0;
@@ -128,6 +130,9 @@ public class EventLoopManager {
       while (true) {
         RobocolDatagram msg = socket.recv();
 
+        if (RobotLog.hasGlobalErrorMsg()) {
+          sendSystemTelemetry();
+        }
         if (shutdownRecvLoop == true) return;
 
         if (msg == null) {
@@ -186,6 +191,10 @@ public class EventLoopManager {
           }
           loopTime.reset();
 
+          if (RobotLog.hasGlobalErrorMsg()) {
+            sendSystemTelemetry();
+          }
+
           // skip this iteration if we've never received a heartbeat
           if (lastHeartbeatReceived.startTime() == 0.0) {
             Thread.sleep(HEARTBEAT_WAIT_DELAY);
@@ -194,6 +203,7 @@ public class EventLoopManager {
 
           if (lastHeartbeatReceived.time() > SECONDS_UNTIL_FORCED_SHUTDOWN) {
             // we haven't received a heartbeat from the driver station in a while
+            RobotLog.setGlobalErrorMsg("Dropped connection.");
             throw new RobotCoreException("No recent heartbeat; force stopping event loop");
           }
 
@@ -209,6 +219,21 @@ public class EventLoopManager {
             // we should catch everything, since we don't know what the event loop might throw
             RobotLog.e("Event loop threw an exception");
             RobotLog.logStacktrace(e);
+            RobotLog.setGlobalErrorMsg("User code threw an uncaught exception: " + e.toString());
+
+            Telemetry telemetry = new Telemetry();
+            telemetry.setTag(SYSTEM_TELEMETRY);
+            telemetry.addData("ERROR", RobotLog.getGlobalErrorMsg());
+
+            if (e.getStackTrace().length > 1) {
+              StackTraceElement ste = e.getStackTrace()[0];
+              telemetry.addData("ERROR LOCATION", "File: " + ste.getFileName() + ", Line: " + ste.getLineNumber());
+            } else {
+              telemetry.addData("ERROR LOCATION", "File: unknown");
+            }
+
+            sendTelemetryData(telemetry);
+
             throw new RobotCoreException("EventLoop Exception in loop()");
           } finally {
             // notify sync'd devices that the event loop is complete
@@ -223,11 +248,15 @@ public class EventLoopManager {
       } catch (RobotCoreException e) {
         RobotLog.v("RobotCoreException in EventLoopManager: " + e.getMessage());
         changeState(State.EMERGENCY_STOP);
+
+        Telemetry telemetry = new Telemetry();
+        telemetry.setTag(SYSTEM_TELEMETRY);
+        telemetry.addData("ERROR", RobotLog.getGlobalErrorMsg());
+        sendTelemetryData(telemetry);
       }
       RobotLog.v("EventLoopRunnable has exited");
     }
   }
-
   /*
    * Empty event loop, used as a sane default
    */
@@ -438,7 +467,15 @@ public class EventLoopManager {
       RobotLog.w("Caught exception during looper init: " + e.toString());
       RobotLog.logStacktrace(e);
       changeState(State.EMERGENCY_STOP);
-      throw new RobotCoreException("Robot failed to start, bad EventLoop init");
+
+      if (RobotLog.hasGlobalErrorMsg()) {
+        Telemetry telemetry = new Telemetry();
+        telemetry.setTag(SYSTEM_TELEMETRY);
+        telemetry.addData("ERROR", RobotLog.getGlobalErrorMsg());
+        sendTelemetryData(telemetry);
+      }
+
+      throw new RobotCoreException("Robot failed to start: " + e.getMessage());
     }
 
     // reset the heartbeat timer
@@ -469,6 +506,13 @@ public class EventLoopManager {
     } catch (Exception e) {
       RobotLog.w("Caught exception during looper teardown: " + e.toString());
       RobotLog.logStacktrace(e);
+
+      if (RobotLog.hasGlobalErrorMsg()) {
+        Telemetry telemetry = new Telemetry();
+        telemetry.setTag(SYSTEM_TELEMETRY);
+        telemetry.addData("ERROR", RobotLog.getGlobalErrorMsg());
+        sendTelemetryData(telemetry);
+      }
     }
 
     eventLoop = new EmptyEventLoop();
@@ -571,5 +615,12 @@ public class EventLoopManager {
 
   private void processUnknownEvent(RobocolDatagram msg) {
     RobotLog.w("RobotCore event loop received unknown event type: " + msg.getMsgType().name());
+  }
+
+  private void sendSystemTelemetry(){
+    Telemetry telemetry = new Telemetry();
+    telemetry.setTag(SYSTEM_TELEMETRY);
+    telemetry.addData("ERROR", RobotLog.getGlobalErrorMsg());
+    sendTelemetryData(telemetry);
   }
 }

@@ -56,9 +56,12 @@ public class TestOp extends OpMode {
 
   Servo servoA;
   Servo servoB;
+  Servo servoC;
 
   IrSeekerSensor irSeekerSensor;
   LightSensor lightSensor;
+
+  double servoPosition = 0.0;
 
   /*
    * Code to run when the op mode is first enabled goes here
@@ -78,6 +81,7 @@ public class TestOp extends OpMode {
 
     servoA = hardwareMap.servo.get("a");
     servoB = hardwareMap.servo.get("b");
+    servoC = hardwareMap.servo.get("c");
 
     irSeekerSensor = hardwareMap.irSeekerSensor.get("ir_seeker");
     lightSensor = hardwareMap.lightSensor.get("light");
@@ -98,18 +102,27 @@ public class TestOp extends OpMode {
     right.setPower(gamepad1.right_stick_y);
 
     if (gamepad1.x) {
-      flag.setPower(0.25);
+      flag.setPower(0.10);
     } else {
       flag.setPower(0.0);
     }
 
     if (gamepad1.y) {
-      arm.setPower(0.30);
+      arm.setPower(0.20);
     } else if (gamepad1.a) {
-      arm.setPower(-0.30);
+      arm.setPower(-0.05);
     } else {
       arm.setPower(0.0);
     }
+
+    if (gamepad1.b) {
+      servoPosition += 0.05;
+    } else {
+      servoPosition += -0.05;
+    }
+    if (servoPosition > 1.0) servoPosition = 1.0;
+    if (servoPosition < 0.0) servoPosition = 0.0;
+    servoC.setPosition(servoPosition);
 
     telemetry.addData("servo a", servoA.getPosition());
     telemetry.addData("servo b", servoB.getPosition());
