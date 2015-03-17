@@ -187,7 +187,7 @@ public class RobotLog {
           RobotLog.v("saving logcat to " + filename);
           RunShellCommand shell = new RunShellCommand();
           RunShellCommand.killSpawnedProcess("logcat", packageName, shell);
-          shell.run(String.format("logcat -f %s.logcat -r%d -n%d-v time %s",
+          shell.run(String.format("logcat -f %s.logcat -r%d -n%d -v time %s",
               filename, fileSizeKb, maxRotatedLogs, filter));
         } catch (RobotCoreException e) {
           RobotLog.v("Error while writing log file to disk: " + e.toString());

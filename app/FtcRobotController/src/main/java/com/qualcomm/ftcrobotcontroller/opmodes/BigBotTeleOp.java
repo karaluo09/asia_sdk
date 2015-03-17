@@ -43,25 +43,25 @@ import com.qualcomm.robotcore.util.Range;
  * <p>
  * Enables control of the robot via the gamepad
  */
-public class K9TeleOp extends OpMode {
-	
+public class BigBotTeleOp extends OpMode {
+
 	/*
 	 * Note: the configuration of the servos is such that
 	 * as the arm servo approaches 0, the arm position moves up (away from the floor).
 	 * Also, as the claw servo approaches 0, the claw opens up (drops the game element).
 	 */
 	// TETRIX VALUES.
-	final static double ARM_MIN_RANGE  = 0.27;
-	final static double ARM_MAX_RANGE  = 0.92;
+	final static double ARM_MIN_RANGE  = 0.1;
+	final static double ARM_MAX_RANGE  = 1.0;
 	final static double CLAW_MIN_RANGE  = 0.20;
 	final static double CLAW_MAX_RANGE  = 0.9;
-	
+
 	// MATRIX VALUES.
 //	final static double ARM_MIN_RANGE  = 0.3;
 //	final static double ARM_MAX_RANGE  = 1.0;
 //	final static double CLAW_MIN_RANGE  = 0.3;
 //	final static double CLAW_MAX_RANGE  = 1.0;
-	
+
 	final static double HOLD_IR_SIGNAL_STRENGTH = 0.20; // Higher values will cause the robot to follow closer
 
 	// position of the arm servo.
@@ -84,7 +84,7 @@ public class K9TeleOp extends OpMode {
 	/**
 	 * Constructor
 	 */
-	public K9TeleOp() {
+	public BigBotTeleOp() {
 
 	}
 
@@ -122,7 +122,7 @@ public class K9TeleOp extends OpMode {
 		motorLeft.setDirection(DcMotor.Direction.REVERSE);
 		
 		arm = hardwareMap.servo.get("servo_1");
-		claw = hardwareMap.servo.get("servo_6");
+		claw = hardwareMap.servo.get("servo_2");
 		
 		// set the limits on the arm and claw servos.
 		arm.scaleRange(ARM_MIN_RANGE,  ARM_MAX_RANGE);
@@ -211,10 +211,11 @@ public class K9TeleOp extends OpMode {
 		 */
 
 		telemetry.addData("Text", "*** Robot Data***");
-		telemetry.addData("arm", "arm:  " + Double.toString(armPosition));
-		telemetry.addData("claw", "claw: " + Double.toString(clawPosition));
-		telemetry.addData("left tgt pwr",  "left  pwr: " + Float.toString(left));
-		telemetry.addData("right tgt pwr", "right pwr: " + Float.toString(right));
+		telemetry.addData("arm", "arm:  " + String.format("%.2f", armPosition));
+
+		telemetry.addData("claw", "claw: " + String.format("%.2f", clawPosition));
+		telemetry.addData("left tgt pwr",  "left  pwr: " + String.format("%.2f", left));
+		telemetry.addData("right tgt pwr", "right pwr: " + String.format("%.2f", right));
 	}
 
 	/*

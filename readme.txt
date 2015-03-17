@@ -9,4 +9,7 @@ Here are the changes in this release:​
  - When using Android 4.4 or later, the home / navigation buttons are hidden unless you swipe from the sides
  - Remote restart can be used to restart a robot due to network disconnects
 
+ - Fixed line in com.qualcomm.robotcore.util.RobotLog so that timestamps are now included with the logs.
+
+
 
