@@ -1,3 +1,19 @@
+Rel4_04_beta_02
+
+​ - now includes gradle build files
+ - when importing into Android Studio, import as a gradle project
+​ - The Robot Controller is now the Wifi Direct Group Owner
+ - Ability to recover running op mode from a dropped connection
+ - Display DS and RC names on app
+ - Quicker retry on stalled or delayed USB communication
+ - Encoder support for NXT devices
+ - Wifi Direct will continue to scan for a peer until a connection is made
+ - RC will dim the display when not actively being used
+ - Renamed HiTechnic jar to Modern Robotics
+
+
+*************************
+
 Rel4_03
 
 FTC Software version 4.03 has been released to FIRST.
