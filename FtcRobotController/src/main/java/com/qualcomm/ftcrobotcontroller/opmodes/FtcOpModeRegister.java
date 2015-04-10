@@ -1,4 +1,4 @@
-/* Copyright (c) 2014, 2015 Qualcomm Technologies Inc
+/* Copyright (c) 2014 Qualcomm Technologies Inc
 
 All rights reserved.
 
@@ -56,13 +56,25 @@ public class FtcOpModeRegister implements OpModeRegister {
      * final op mode will remain.
      */
 
+/*
+    manager.register("BigBotTeleOp", BigBotTeleOp.class);
+    manager.register("BigBotLine", BigBotLine.class);
+*/
+
     manager.register("K9TeleOp", K9TeleOp.class);
+    manager.register("K9TankDrive", K9TankDrive.class);
+    manager.register("K9AutoTime", K9AutoTime.class);
+    manager.register("K9IrSeeker", K9IrSeeker.class);
+    manager.register("K9Line", K9Line.class);
+
     manager.register("NullOp", NullOp.class);
+
+/*
     manager.register("TeleOp", TeleOp.class);
     manager.register("TestOp", TestOp.class);
     manager.register("LM on NXT MC", UseLegacyModuleOnDcMotorController.class);
     manager.register("Mock API", MockReadFromNxtMotorControllerOpMode.class);
-    manager.register("CompassCalibration", CompassCalibration.class);
-    manager.register("NxtTeleOp", NxtTeleOp.class);
+     */
+
   }
 }
